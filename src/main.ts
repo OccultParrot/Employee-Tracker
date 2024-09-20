@@ -1,5 +1,6 @@
+// Importing the select prompt
 import { select } from "@inquirer/prompts";
-import 'colors';
+import 'colors'; 
 
 /* Main Menu Options:
  - View All Departments
@@ -14,10 +15,11 @@ import 'colors';
 async function Start() {
     let isRunning: boolean = true;
 
+    // The main loop. When isRunning is set to false then we exit
     while (isRunning) {
         // Display title
         console.log("Err... The title will be here in the future lol");
-        
+
         // Have the user select an action they want to preform on the system
         const selection = await select({
             message: "'ello world!",
@@ -112,7 +114,7 @@ async function Start() {
         console.clear();
     }
 
-    // I didn't know regions were a thing is VSCode, cool!! I use them a lot with CLion and InteliJ
+    // I didn't know regions were a thing is VSCode, cool!! I use them a lot with CLion and InteliJ to help block out sections of code
     //#region exit logic
     
     // Do all exit logic here
