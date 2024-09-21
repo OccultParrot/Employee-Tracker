@@ -12,6 +12,7 @@ import 'colors';
  - Update Employee Role
  - Exit
 */
+
 async function Start() {
     let isRunning: boolean = true;
 
