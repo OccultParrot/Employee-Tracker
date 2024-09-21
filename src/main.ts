@@ -2,6 +2,8 @@
 import { select } from "@inquirer/prompts";
 import 'colors'; 
 
+import DatabaseFunctions from "./db_functions.js";
+
 /* Main Menu Options:
  - View All Departments
  - View All Roles
@@ -72,31 +74,31 @@ async function Start() {
         switch (selection) {
             case 1:
                 // TODO: View All Departments 
-                console.log("View All Departments");
+                await DatabaseFunctions.ViewAllDepartments();
                 break;
             case 2:
                 // TODO: View All Roles
-                console.log("View All Roles");
+                await DatabaseFunctions.ViewAllRoles();
                 break;
             case 3:
                 // TODO: View All Employees
-                console.log("View All Employees");
+                await DatabaseFunctions.ViewAllEmployees();
                 break;
             case 4:
                 // TODO: Add a Department
-                console.log("Add a Department");
+                await DatabaseFunctions.AddDepartment();
                 break;
             case 5:
                 // TODO: Add a Role
-                console.log("Add a Role");
+                await DatabaseFunctions.AddRole();
                 break;
             case 6:
                 // TODO: Add an Employee
-                console.log("Add an Employee");
+                await DatabaseFunctions.AddEmployee();
                 break;
             case 7:
                 // TODO: Update Employee Role
-                console.log("Update Employee Role");
+                await DatabaseFunctions.UpdateEmployeeRole();
                 break;
             
             // If they choose "Exit" we want to close the main loop!
