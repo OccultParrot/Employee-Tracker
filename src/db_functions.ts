@@ -1,10 +1,19 @@
 import "colors";
-import { input } from "@inquirer/prompts";
+import { input, number, select } from "@inquirer/prompts";
 import { QueryResult } from "pg";
 
 import { pool, connectToDb } from "./connection.js";
 
 connectToDb();
+
+class Choice {
+  name: string;
+  value: any;
+  constructor(name: string, value: any) {
+    this.name = name;
+    this.value = value;
+  }
+}
 
 /**
  * Holds the data for a department that matches the columns of the department table in the database
@@ -20,6 +29,10 @@ class Department {
 
     this.id = id;
     this.name = name;
+  }
+
+  public get formattedName(): string {
+    return `${this.name} (${this.id})`;
   }
 }
 
@@ -42,32 +55,46 @@ class Role {
     this.salary = salary;
     this.departmentId = departmentId;
   }
+
+  public get formattedName(): string {
+    return `${this.title} (${this.id})`;
+  }
 }
 
 /**
  * Holds the data for a employee that matches the columns of the employee table in the database
  */
-// class Employee {
-//     id: number;
-//     firstName: string;
-//     lastName: string;
-//     roleId: number;
-//     managerId: number | null;
+class Employee {
+  id: number;
+  firstName: string;
+  lastName: string;
+  roleId: number;
+  managerId: number | null;
 
-//     constructor(id: number, firstName: string, lastName: string, roleId: number, managerId: number) {
-//         if (firstName.length > 30) {
-//             throw new Error("First name cannot be over 30 characters.")
-//         } else if (lastName.length > 30) {
-//             throw new Error("Last name cannot be over 30 characters.")
-//         }
+  constructor(
+    id: number,
+    firstName: string,
+    lastName: string,
+    roleId: number,
+    managerId: number
+  ) {
+    if (firstName.length > 30) {
+      throw new Error("First name cannot be over 30 characters.");
+    } else if (lastName.length > 30) {
+      throw new Error("Last name cannot be over 30 characters.");
+    }
 
-//         this.id = id;
-//         this.firstName = firstName;
-//         this.lastName = lastName;
-//         this.roleId = roleId;
-//         this.managerId = managerId;
-//     }
-// }
+    this.id = id;
+    this.firstName = firstName;
+    this.lastName = lastName;
+    this.roleId = roleId;
+    this.managerId = managerId;
+  }
+
+  public get formattedName(): string {
+    return `${this.firstName} ${this.lastName} (${this.id})`;
+  }
+}
 
 class DatabaseFunctions {
   constructor() {}
@@ -136,11 +163,37 @@ class DatabaseFunctions {
    *
    * @returns An array of strings holding all the employees in the database
    */
-  // private async GetEmployees(): Promise<Employee[]> {
-  //     return [];
-  // }
+  private async GetEmployees(): Promise<Employee[]> {
+    return new Promise((resolve, reject) => {
+      const outputArray: Employee[] = [];
+      pool.query(
+        "SELECT * FROM employee",
+        [],
+        (err: Error, result: QueryResult) => {
+          if (err) {
+            console.log(err);
+            reject(err);
+          } else {
+            result.rows.forEach((row) => {
+              const role: Employee = new Employee(
+                row.id,
+                row.first_name,
+                row.last_name,
+                row.role_id,
+                row.manager_id
+              );
+              outputArray.push(role);
+            });
+            resolve(outputArray);
+          }
+        }
+      );
+    });
+  }
 
-  // Prints all departments found in the database in a formatted table
+  /**
+   * Prints all the departments in the data base in a formatted table
+   */
   async ViewAllDepartments() {
     console.clear();
     // The maximum length a string can be in the database "VARCHAR(30)"
@@ -184,7 +237,9 @@ class DatabaseFunctions {
     await input({ message: "Press Enter to continue..." });
   }
 
-  // Prints all roles found in the database in a formatted table
+  /**
+   * Prints all the roles in the data base in a formatted table
+   */
   async ViewAllRoles() {
     // The list of departments in the database
     const departments: Department[] = await this.GetDepartments();
@@ -218,12 +273,12 @@ class DatabaseFunctions {
         "─".repeat(maxStringLength)
     );
 
-    // Getting the department connected to the roles ID 
+    // Getting the department connected to the roles ID
     roles.forEach((role) => {
       let departmentInfo: Department = new Department(NaN, "N/A");
       departments.forEach((department) => {
         if (department.id == role.departmentId) {
-          departmentInfo = new Department(department.id, department.name);
+          departmentInfo = department;
         }
       });
 
@@ -238,8 +293,7 @@ class DatabaseFunctions {
           role.salary +
           " ".repeat(maxStringLength / 2 - role.salary.toString().length) +
           "│ " +
-          departmentInfo.name.yellow,
-        "(".gray + departmentInfo.id.toString().gray + ")".gray
+          departmentInfo.formattedName
       );
     });
 
@@ -247,20 +301,270 @@ class DatabaseFunctions {
     await input({ message: "Press enter to continue" });
   }
 
-  // Prints all employees found in the database in a formatted table
-  async ViewAllEmployees() {}
+  /**
+   * Prints all the employees in the data base in a formatted table
+   */
+  async ViewAllEmployees() {
+    const maxStringLength: number = 30;
+
+    const roles = await this.GetRoles();
+    const employees = await this.GetEmployees();
+
+    // Printing column headers
+    console.log(
+      "First Name" +
+        " ".repeat(maxStringLength - "First Name".length) +
+        "│ " +
+        "Last Name" +
+        " ".repeat(maxStringLength - "Last Name".length) +
+        "│ " +
+        "ID" +
+        " ".repeat(2) +
+        "│ " +
+        "Role (ID)" +
+        " ".repeat(maxStringLength - "Role (ID)".length) +
+        "│ " +
+        "Manager (ID)"
+    );
+
+    // Printing the divider
+    console.log(
+      "─".repeat(maxStringLength) +
+        "┼" +
+        "─".repeat(maxStringLength + 1) +
+        "┼" +
+        "─".repeat(5) +
+        "┼" +
+        "─".repeat(maxStringLength + 1) +
+        "┼" +
+        "─".repeat(maxStringLength - 1)
+    );
+
+    employees.forEach((employee) => {
+      let manager: Employee | null = new Employee(NaN, "N/A", "N/A", NaN, NaN);
+      let role: Role = new Role(NaN, "N/A", NaN, NaN);
+
+      // If the employee doesn't have a manager (Is top boss) then we set it to null
+      if (employee.managerId == null) {
+        manager = null;
+      } else {
+        // We compare the id of the item in the loop to the employee and if the manager ID on the employee is equal to the id of the potential manager, then we have found our manager!
+        employees.forEach((potentialManager) => {
+          if (potentialManager.id == employee.managerId) {
+            manager = potentialManager;
+          }
+        });
+      }
+      // We compare the role id on the employee to each id of the roles and if they match then we found out role!
+      roles.forEach((potentialRole) => {
+        if (potentialRole.id == employee.roleId) {
+          role = potentialRole;
+        }
+      });
+
+      // If the employee has a manager then we print the row, with the manager information
+      if (manager) {
+        console.log(
+          employee.firstName.yellow +
+            " ".repeat(maxStringLength - employee.firstName.length) +
+            "│ " +
+            employee.lastName.yellow +
+            " ".repeat(maxStringLength - employee.lastName.length) +
+            "│ " +
+            employee.id +
+            " ".repeat(4 - employee.id.toString().length) +
+            "│ " +
+            role.title +
+            " (" + // 2 characters
+            role.id +
+            ")" + // 1 character
+            " ".repeat(
+              maxStringLength -
+                (role.title.length + 2 + role.id.toString().length + 1)
+            ) +
+            "│ " +
+            manager.firstName.yellow +
+            " " +
+            manager.lastName.yellow +
+            " (" +
+            manager.id +
+            ")"
+        );
+        // If the employee DOESN'T have a manager, then we print the row, and state that the employee does not have a manager
+      } else {
+        console.log(
+          employee.firstName.yellow +
+            " ".repeat(maxStringLength - employee.firstName.length) +
+            "│ " +
+            employee.lastName.yellow +
+            " ".repeat(maxStringLength - employee.lastName.length) +
+            "│ " +
+            employee.id +
+            " ".repeat(4 - employee.id.toString().length) +
+            "│ " +
+            role.title +
+            " (" + // 2 characters
+            role.id +
+            ")" + // 1 character
+            " ".repeat(
+              maxStringLength -
+                (role.title.length + 2 + role.id.toString().length + 1)
+            ) +
+            "│ " +
+            "Has no manager".red
+        );
+      }
+    });
+
+    console.log();
+    await input({ message: "Press enter to continue" });
+  }
 
   // Adds a department to the database
-  async AddDepartment() {}
+  async AddDepartment() {
+    // Collecting the new department's name
+    const departmentName = await input({
+      message: "Enter name for the new department",
+    });
+    // If the department already exists then
+    const departments = await this.GetDepartments();
+    departments.forEach((department) => {
+      if (department.name == departmentName) {
+        throw new Error(
+          "Department name cannot match existing department name! Existing department: " +
+            department.formattedName
+        );
+      } else if (departmentName.length > 30) {
+        throw new Error(
+          "Department name cannot be greater than 30 characters."
+        );
+      }
+    });
+
+    // Querying database to add new department
+    pool.query(
+      `INSERT INTO department (department_name) VALUES ('${departmentName}')`,
+      [],
+      (err: Error) => {
+        if (err) {
+          throw new Error("Error: " + err);
+        }
+        console.log(
+          "Row",
+          departmentName,
+          "successfully added to the departments table!"
+        );
+      }
+    );
+  }
 
   // Adds a role to the database
-  async AddRole() {}
+  async AddRole() {
+    const departmentSelectArray: Choice[] = [];
+    const departments = await this.GetDepartments();
+    departments.forEach((department) => {
+      departmentSelectArray.push(
+        new Choice(department.formattedName, department.id)
+      );
+    });
+
+    // Collecting the new roles's title
+    const roleTitle = await input({
+      message: "Enter name for the new role",
+    });
+    // Collecting the new roles salary
+    const roleSalary = await number({
+      message: "Enter salary for the new role",
+    });
+    // Collecting the new roles department it belongs to
+    const roleDepartment = await select({
+      message: "Enter department the new role is part of.",
+      choices: departmentSelectArray,
+    });
+
+    // If the role already exists then throw error
+    const roles = await this.GetRoles();
+    roles.forEach((role) => {
+      if (role.title == roleTitle) {
+        throw new Error(
+          "Role name cannot match existing role name! Existing role: " +
+            role.formattedName
+        );
+      } else if (roleTitle.length > 30) {
+        throw new Error("Role name cannot be greater than 30 characters");
+      }
+    });
+
+    // Querying database to add new role
+    pool.query(
+      `INSERT INTO role (title, salary, department_id) VALUES ('${roleTitle}', ${roleSalary}, ${roleDepartment})`,
+      [],
+      (err: Error) => {
+        if (err) {
+          throw new Error("Error: " + err);
+        }
+        console.log("Row", roleTitle, "successfully added to the roles table!");
+      }
+    );
+  }
 
   // Adds a employee to the database
-  async AddEmployee() {}
+  async AddEmployee() {
+    // Making choice array for roles
+    const roleSelectArray: Choice[] = [];
+    const roles = await this.GetRoles();
+    roles.forEach((role) => {
+      roleSelectArray.push(new Choice(role.formattedName, role.id));
+    });
 
-  // Updates the role of the employee
-  async UpdateEmployeeRole() {}
+    // Making choice array for managers
+    const managerSelectArray: Choice[] = [];
+    const employees = await this.GetEmployees();
+    managerSelectArray.push(new Choice("NO MANAGER".bgBlack.white, null));
+    employees.forEach((employee) => {
+      managerSelectArray.push(new Choice(employee.formattedName, employee.id));
+    });
+
+    // Collecting first name of new employee
+    const firstName = await input({
+      message: "Enter first name of new employee.",
+    });
+    // Collecting last name of new employee
+    const lastName = await input({
+      message: "Enter last name of new employee.",
+    });
+    // Collecting the role that the employee has
+    const roleSelection = await select({
+      message: "Select the role this employee holds",
+      choices: roleSelectArray,
+    });
+    // Collecting the manager that the employee is under
+    const managerSelection = await select({
+      message: 'Select employee\'s manager, if none select "NO MANAGER"',
+      choices: managerSelectArray,
+    });
+
+    // If the name is over 30 characters, throw an error!
+    if (firstName.length > 30 || lastName.length > 30) {
+      throw new Error("First and last name cannot be over 30 characters");
+    }
+
+    // Querying database to add new employee
+    pool.query(
+      `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ('${firstName}', '${lastName}', ${roleSelection}, ${managerSelection})`,
+      [],
+      (err: Error) => {
+        if (err) {
+          throw new Error("Error: " + err);
+        }
+        console.log(
+          "Row",
+          firstName + " " + lastName,
+          "successfully added to the employees table!"
+        );
+      }
+    );
+  }
 }
 
 export default new DatabaseFunctions();

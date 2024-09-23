@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node dist/main.js"
+    "start": "node dist/main.js",
+    "init": "npm run build && echo \"type \\i db/schema.sql and \\i db/seeds.sql\" && exit 1"
   },
   "keywords": [],
   "author": "Thomas Stemler",

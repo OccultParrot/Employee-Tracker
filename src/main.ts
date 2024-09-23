@@ -1,5 +1,4 @@
 // Importing the select prompt
-
 import { select } from "@inquirer/prompts";
 
 import DatabaseFunctions from "./db_functions.js";
@@ -11,12 +10,10 @@ import DatabaseFunctions from "./db_functions.js";
  - Add a Department
  - Add a Role
  - Add an Employee
- - Update Employee Role
  - Exit
 */
 
 async function Run() {
-
   // Display title
   console.log("Err... The title will be here in the future lol");
 
@@ -55,11 +52,6 @@ async function Run() {
         description: "",
       },
       {
-        name: "Update Employee Role",
-        value: 7,
-        description: "",
-      },
-      {
         name: "Exit".red,
         value: 0,
         description: "",
@@ -87,9 +79,6 @@ async function Run() {
     case 6:
       await DatabaseFunctions.AddEmployee();
       break;
-    case 7:
-      await DatabaseFunctions.UpdateEmployeeRole();
-      break;
 
     case 0:
       console.log("Exiting...");
@@ -101,10 +90,11 @@ async function Run() {
       break;
   }
   // Clearing the console to remove last printed data
-  
+
   console.clear();
 }
 
 // Run the application!
-while (true)
+while (true) {
   await Run();
+}
